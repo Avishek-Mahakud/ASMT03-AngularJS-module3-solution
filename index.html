@@ -1,18 +1,41 @@
 <!DOCTYPE html>
 <html lang="en" ng-app="NarrowItDownApp">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Narrow It Down</title>
-    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+  <head>
+    <title>Narrow Down Your Menu Choice</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="styles/bootstrap.min.css" />
+    <link rel="stylesheet" href="styles/styles.css" />
+    <script src="angular.min.js"></script>
     <script src="app.js"></script>
-</head>
-<body ng-controller="NarrowItDownController as ctrl">
-    <div>
-        <input type="text" ng-model="ctrl.searchTerm" placeholder="Search">
-        <button ng-click="ctrl.narrowItDown()">Narrow It Down For Me!</button>
+  </head>
+  <body>
+    <div class="container" ng-controller="NarrowItDownController as narrowCtrl" >
+      <h1>Narrow Down Your Chinese Menu Choice</h1>
+      <div style="display: flex; flex-direction: column;">
+        <div style="flex-direction: row;">
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <input
+              ng-model="narrowCtrl.searchTerm"
+              type="text"
+              placeholder="search term"
+              class="form-control"
+            />
+          </div>
+          <div class="form-group narrow-button">
+            <button ng-click="narrowCtrl.search()" class="btn btn-primary">
+              Narrow It Down For Me!
+            </button>
+          </div>
+        </div>
+
+        <div class="container sp-card">
+          <found-items
+            items="narrowCtrl.found"
+            on-remove="narrowCtrl.remove(index)"
+          ></found-items>
+        </div>
+      </div>
     </div>
-    <found-items found="ctrl.found" on-remove="ctrl.removeItem(index)"></found-items>
-    <p ng-if="!ctrl.found.length && ctrl.searchTerm">Nothing found</p>
-</body>
+  </body>
 </html>

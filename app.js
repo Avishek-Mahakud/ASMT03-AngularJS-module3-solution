@@ -1,64 +1,82 @@
 (function () {
-    'use strict';
+  "use strict";
 
-    angular.module('NarrowItDownApp', [])
-    .controller('NarrowItDownController', ['MenuSearchService', function (MenuSearchService) {
-        var ctrl = this;
+  angular
+    .module("NarrowItDownApp", [])
+    .controller("NarrowItDownController", NarrowItDownController)
+    .service("MenuSearchService", MenuSearchService)
+    .constant("ApiBasePath", "https://coursera-jhu-default-rtdb.firebaseio.com")
+    .directive("foundItems", FoundItemsDirective);
 
-        ctrl.narrowItDown = function () {
-            if (!ctrl.searchTerm) {
-                ctrl.found = [];
-                return;
-            }
-            MenuSearchService.getMatchedMenuItems(ctrl.searchTerm)
-            .then(function (foundItems) {
-                ctrl.found = foundItems;
-            });
-        };
+  //Directive
 
-        ctrl.removeItem = function (index) {
-            ctrl.found.splice(index, 1);
-        };
-    }])
-    .service('MenuSearchService', ['$http', function ($http) {
-        var service = this;
+  function FoundItemsDirective() {
+    var ddo = {
+      templateUrl: "foundItems.html",
+      scope: {
+        items: "<",
+        onRemove: "&",
+      },
+    };
+    return ddo;
+  }
 
-        service.getMatchedMenuItems = function (searchTerm) {
-            return $http({
-                method: 'GET',
-                url: 'https://coursera-jhu-default-rtdb.firebaseio.com/menu_items.json'
-            }).then(function (response) {
-                var items = response.data.menu_items;
-                var foundItems = [];
+  // Controller
+  NarrowItDownController.$inject = ["MenuSearchService"];
+  function NarrowItDownController(MenuSearchService) {
+    var narrowCtrl = this;
+    narrowCtrl.searchTerm = "";
+    narrowCtrl.found = [];
 
-                for (var key in items) {
-                    if (items.hasOwnProperty(key)) {
-                        var item = items[key];
-                        if (item.description.toLowerCase().indexOf(searchTerm.toLowerCase()) !== -1) {
-                            foundItems.push(item);
-                        }
-                    }
-                }
-                return foundItems;
-            });
-        };
-    }])
-    .directive('foundItems', function () {
-        return {
-            restrict: 'E',
-            template: `
-                <ul>
-                    <li ng-repeat="item in found track by $index">
-                        {{item.name}}, {{item.short_name}}, {{item.description}}
-                        <button ng-click="onRemove({index: $index})">Don't want this one!</button>
-                    </li>
-                </ul>
-            `,
-            scope: {
-                found: '<',
-                onRemove: '&'
-            }
-        };
-    });
+    narrowCtrl.search = function () {
+      narrowCtrl.found = [];
+      if (narrowCtrl.searchTerm.trim() != "") {
+        var promise = MenuSearchService.getMatchedMenuItems(
+          narrowCtrl.searchTerm
+        );
+        promise
+          .then(function (result) {
+            narrowCtrl.found = result;
+          })
+          .catch(function (error) {
+            console.log("Something went wrong: " + error);
+            narrowCtrl.search = "Nothing found 2";
+          });
+      }
+    };
 
+
+    narrowCtrl.remove = function (index) {
+      narrowCtrl.found.splice(index, 1);
+    };
+  }
+
+  // Service
+  MenuSearchService.$inject = ["$http", "ApiBasePath"];
+  function MenuSearchService($http, ApiBasePath) {
+    var service = this;
+    service.getMatchedMenuItems = function (searchTerm) {
+      return $http({
+        method: "GET",
+        url: ApiBasePath + "/menu_items.json",
+      }).then(function (result) {
+        var foundItems = [];
+        for (var category in result.data) {
+          if (result.data.hasOwnProperty(category)) {
+            var menuItems = result.data[category].menu_items;
+          }
+
+          var matchedItems = menuItems.filter(function (item) {
+            return (
+              item.description
+                .toLowerCase()
+                .indexOf(searchTerm.toLowerCase()) !== -1
+            );
+          });
+          foundItems = foundItems.concat(matchedItems);
+        }
+        return foundItems;
+      });
+    };
+  }
 })();
