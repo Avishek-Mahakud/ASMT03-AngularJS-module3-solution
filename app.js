@@ -1,82 +1,52 @@
-(function () {
-  "use strict";
+// Define the AngularJS module
+var app = angular.module('MenuApp', []);
 
-  angular
-    .module("NarrowItDownApp", [])
-    .controller("NarrowItDownController", NarrowItDownController)
-    .service("MenuSearchService", MenuSearchService)
-    .constant("ApiBasePath", "https://coursera-jhu-default-rtdb.firebaseio.com")
-    .directive("foundItems", FoundItemsDirective);
+// Service to fetch menu items from the server
+app.service('MenuSearchService', function($http) {
+  this.getMatchedMenuItems = function(searchTerm) {
+    return $http({
+      method: 'GET',
+      url: 'path/to/your/data.json'
+    });
+  };
+});
 
-  //Directive
+// Controller to handle user input and filtering
+app.controller('NarrowItDownController', function($scope, MenuSearchService) {
+  $scope.searchTerm = '';
+  $scope.foundItems = [];
+  $scope.message = '';
 
-  function FoundItemsDirective() {
-    var ddo = {
-      templateUrl: "foundItems.html",
-      scope: {
-        items: "<",
-        onRemove: "&",
-      },
-    };
-    return ddo;
-  }
+  $scope.narrowItDown = function() {
+    if ($scope.searchTerm.trim() === '') {
+      $scope.foundItems = [];
+      $scope.message = "Nothing found";
+      return;
+    }
 
-  // Controller
-  NarrowItDownController.$inject = ["MenuSearchService"];
-  function NarrowItDownController(MenuSearchService) {
-    var narrowCtrl = this;
-    narrowCtrl.searchTerm = "";
-    narrowCtrl.found = [];
+    MenuSearchService.getMatchedMenuItems($scope.searchTerm)
+      .then(function(response) {
+        var allItems = [];
+        angular.forEach(response.data, function(category) {
+          allItems = allItems.concat(category.menu_items);
+        });
 
-    narrowCtrl.search = function () {
-      narrowCtrl.found = [];
-      if (narrowCtrl.searchTerm.trim() != "") {
-        var promise = MenuSearchService.getMatchedMenuItems(
-          narrowCtrl.searchTerm
+        $scope.foundItems = allItems.filter(item =>
+          item.description.toLowerCase().includes($scope.searchTerm.toLowerCase())
         );
-        promise
-          .then(function (result) {
-            narrowCtrl.found = result;
-          })
-          .catch(function (error) {
-            console.log("Something went wrong: " + error);
-            narrowCtrl.search = "Nothing found 2";
-          });
-      }
-    };
 
-
-    narrowCtrl.remove = function (index) {
-      narrowCtrl.found.splice(index, 1);
-    };
-  }
-
-  // Service
-  MenuSearchService.$inject = ["$http", "ApiBasePath"];
-  function MenuSearchService($http, ApiBasePath) {
-    var service = this;
-    service.getMatchedMenuItems = function (searchTerm) {
-      return $http({
-        method: "GET",
-        url: ApiBasePath + "/menu_items.json",
-      }).then(function (result) {
-        var foundItems = [];
-        for (var category in result.data) {
-          if (result.data.hasOwnProperty(category)) {
-            var menuItems = result.data[category].menu_items;
-          }
-
-          var matchedItems = menuItems.filter(function (item) {
-            return (
-              item.description
-                .toLowerCase()
-                .indexOf(searchTerm.toLowerCase()) !== -1
-            );
-          });
-          foundItems = foundItems.concat(matchedItems);
+        if ($scope.foundItems.length === 0) {
+          $scope.message = "Nothing found";
+        } else {
+          $scope.message = "";
         }
-        return foundItems;
+      })
+      .catch(function(error) {
+        console.log("Error fetching data:", error);
       });
-    };
-  }
-})();
+  };
+
+  $scope.removeItem = function(index) {
+    $scope.foundItems.splice(index, 1);
+  };
+});
